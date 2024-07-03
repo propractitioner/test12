@@ -27,10 +27,12 @@ def get_visible_stars(lat, lon, date):
     t = ts.from_datetime(date)
     
     visible_stars = []
+    earth = load('de421.bsp')['earth']
     for _, star in stars.iterrows():
         if star['magnitude'] <= 4:
             s = Star.from_dataframe(star)
-            alt, az, _ = location.at(t).observe(s).apparent().altaz()
+            astrometric = earth.at(t).observe(s)
+            alt, az, _ = astrometric.apparent().altaz()
             if alt.degrees > 0:
                 visible_stars.append((az.degrees, alt.degrees, star['magnitude']))
     
