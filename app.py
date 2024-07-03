@@ -22,16 +22,17 @@ def get_visible_stars(lat, lon, date):
     with load.open(hipparcos.URL) as f:
         stars = hipparcos.load_dataframe(f)
 
-    location = wgs84.latlon(lat, lon)
     ts = load.timescale()
     t = ts.from_datetime(date)
     
-    visible_stars = []
     earth = load('de421.bsp')['earth']
+    observer = wgs84.latlon(lat, lon)
+    
+    visible_stars = []
     for _, star in stars.iterrows():
         if star['magnitude'] <= 4:
             s = Star.from_dataframe(star)
-            astrometric = earth.at(t).observe(s)
+            astrometric = (earth + observer).at(t).observe(s)
             alt, az, _ = astrometric.apparent().altaz()
             if alt.degrees > 0:
                 visible_stars.append((az.degrees, alt.degrees, star['magnitude']))
@@ -60,10 +61,13 @@ selected_city = st.selectbox("도시를 선택하세요", list(cities.keys()))
 
 if selected_city:
     lat, lon = cities[selected_city]
-    date = datetime.datetime.now(pytz.timezone('Asia/Tokyo'))  # 일본 시간대로 변경
+    date = datetime.datetime.now(pytz.timezone('Asia/Tokyo'))
     
     stars = get_visible_stars(lat, lon, date)
-    fig = plot_sky(stars)
-    
-    st.write(f"{selected_city}의 {date.strftime('%Y-%m-%d %H:%M')} 기준 밤하늘입니다.")
-    st.pyplot(fig)
+    if stars:  # 별이 하나 이상 있을 때만 그래프를 그립니다
+        fig = plot_sky(stars)
+        
+        st.write(f"{selected_city}의 {date.strftime('%Y-%m-%d %H:%M')} 기준 밤하늘입니다.")
+        st.pyplot(fig)
+    else:
+        st.write("현재 시간에 보이는 별이 없습니다.")
